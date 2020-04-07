@@ -1,9 +1,13 @@
+extern crate serde_json;
 use reqwest::Error;
 use reqwest::{Client};
 use std::collections::HashMap;
 use http::header::HeaderMap;
 //use http::Uri;
 use url::{form_urlencoded,UrlQuery,Url};
+use serde::{Deserialize, Serialize};
+
+
 
 /// https://www.jianshu.com/p/67e4bd47d981
 /// https://docs.rs/crate/reqwest/0.10.1
@@ -23,6 +27,16 @@ fn to_qs(h:&Vec<(&str,&str)>)->String{
     }
     qs.finish()
 }
+
+macro_rules! hash{
+    ($($k:expr=>$v:expr),*)=> {{
+            let mut m=HashMap::new();
+            $(m.insert($k,$v);)*
+            m
+    }}
+}
+
+
 
 fn create_client()-> Result<(Client), Box<dyn std::error::Error + Send + Sync + 'static>>{
         let h=vec![
@@ -107,7 +121,84 @@ fn test_post_form(){
     println!("{:?}", res);
 }
 
+
+
+enum Methods{
+    post,
+    get,
+    put,
+    delete,
+}
+
+pub struct Api{
+    url:String,
+    method:Methods,
+    query:HashMap<String,String>,
+    data:HashMap<String,String>,
+}
+
+
+/// { "format":"json", "aggr":1, "flag_qc":1, "p":1, "n":30, "w":"简单爱" }
+#[derive(Serialize, Deserialize)]
+pub struct SearchSong {
+    #[serde(rename = "format")]
+    format: String,
+
+    #[serde(rename = "aggr")]
+    aggr: i64,
+
+    #[serde(rename = "flag_qc")]
+    flag_qc: i64,
+
+    #[serde(rename = "p")]
+    p: i64,
+
+    #[serde(rename = "n")]
+    n: i64,
+
+    #[serde(rename = "w")]
+    w: String,
+}
+
+
+//todo
+type SDK=HashMap<String,Box<dyn Fn(i32)->i32>>;
+
+fn create_sdk()->SDK{
+    let mut apis:HashMap<String,Api>=HashMap::new();
+    apis.insert("search".to_string(),Api{
+        url:"https://c.y.qq.com/soso/fcgi-bin/client_search_cp".to_string(),
+        method:Methods::get,
+        query:hash![
+            "format"=>"json",
+            "aggr"=>"1",
+            "flag_qc"=>"1",
+            "p"=>"1",
+            "n"=>"30",
+            "w"=>"简单爱"
+        ],
+        data:hash![],
+    });
+
+   //...
+
+    let mut sdk:SDK =HashMap::new();
+    for (k,Api{url,method,query,data}) in apis{
+        let g:Box<dyn Fn(i32)->i32>=match method{
+            Methods::get => {Box::new(move |x|x*2)}
+            _ =>{Box::new(move |x|x*2)}
+            // Methods::post => {}
+            // Methods::put => {}
+            // Methods::delete => {}
+        };
+        sdk.insert(k.to_string(),g);
+    }
+    sdk
+}
+
 fn main(){
+   let s=create_sdk();
+
    //test_get();
    //test_post_json();
    //test_post_form();
