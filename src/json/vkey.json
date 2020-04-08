@@ -1,0 +1,22 @@
+{
+  "code": 0,
+  "cid": 205361747,
+  "userip": "101.233.48.172",
+  "data": {
+    "expiration": 80400,
+    "items": [
+      {
+        "subcode": 104003,
+        "songmid": "003lghpv0jfFXG",
+        "filename": "C400003lghpv0jfFXG.m4a",
+        "vkey": ""
+      },
+      {
+        "subcode": 0,
+        "songmid": "000B4ijs4Ufwql",
+        "filename": "C400000B4ijs4Ufwql.m4a",
+        "vkey": "A8331F2CF22B4BE50873EF46BC10ECBA76F842FD61D8BB5BB4956A863585A796D9151373EC2D0597B19985CB3B1ADA7D195B8DE605DA8397"
+      }
+    ]
+  }
+}

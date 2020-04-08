@@ -2,6 +2,8 @@ extern crate serde_json;
 
 //use reqwest::Error;
 use reqwest::{Client};
+
+
 use http::header::HeaderMap;
 //use http::Uri;
 use url::{form_urlencoded,UrlQuery,Url};
@@ -29,6 +31,8 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 
 
+extern crate chrono;
+use chrono::prelude::*;
 
 
 
@@ -84,10 +88,65 @@ pub struct SearchSong {
 
 
 
+/// {"code":0,"cid":205361747,"userip":"101.233.48.172","data":{"expiration":80400,"items":[{"subcode":104003,"songmid":"003lghpv0jfFXG","filename":"C400003lghpv0jfFXG.m4a","vkey":""}]}}
+
+#[derive(Serialize, Deserialize,Debug)]
+pub struct Vkey {
+    #[serde(rename = "code")]
+    code: i64,
+
+    #[serde(rename = "cid")]
+    cid: i64,
+
+    #[serde(rename = "userip")]
+    userip: String,
+
+    #[serde(rename = "data")]
+    data: Data,
+}
+
+#[derive(Serialize, Deserialize,Debug)]
+pub struct Data {
+    #[serde(rename = "expiration")]
+    expiration: i64,
+
+    #[serde(rename = "items")]
+    items: Vec<Item>,
+}
+
+#[derive(Serialize, Deserialize,Debug)]
+pub struct Item {
+    #[serde(rename = "subcode")]
+    subcode: i64,
+
+    #[serde(rename = "songmid")]
+    songmid: String,
+
+    #[serde(rename = "filename")]
+    filename: String,
+
+    #[serde(rename = "vkey")]
+    vkey: String,
+}
+
+
+
 
 
 /// https://www.jianshu.com/p/67e4bd47d981
 /// https://docs.rs/crate/reqwest/0.10.1
+
+
+fn timestamp()-> String{
+    let t=Utc::now();
+    let ms=t.timestamp_millis();
+    let s=ms/1000;
+    let s1=format!("{}",s);
+    println!("{}",s1);
+    s1
+}
+
+
 
 fn add_qs(u:&str,h:&Vec<(String,String)>)->String{
     let mut uri = Url::parse(u).unwrap();
@@ -103,6 +162,16 @@ fn to_qs(h:&Vec<(&str,&str)>)->String{
         qs.append_pair(k,v);
     }
     qs.finish()
+}
+
+macro_rules!to_qs{
+    ($($k:expr=>$v:expr),*)=> {{
+            let mut qs=form_urlencoded::Serializer::new(String::new());
+            $(
+                qs.append_pair($k,$v);
+             )*
+            qs.finish()
+    }}
 }
 
 macro_rules!hash{
@@ -195,10 +264,13 @@ async fn download(u:&str) -> Result<(), Box<dyn std::error::Error + Send + Sync 
         .bytes()
         .await?;
     let path=url2name(u)?;
+    println!("download to {}",path);
     let mut o: File = File::create(path)?;
     o.write(&Bytes::from(body))?;
     Ok(())
 }
+
+
 
 fn get1(u:String,q:HashMap<String,String>)->GET{
     //let mix1=|x:i32|->i32{x*2};
@@ -286,6 +358,38 @@ fn test_post_form(){
     println!("{:?}", res);
 }
 
+fn id2album (id:&str)->String{
+    format!("http://imgcache.qq.com/music/photo/album_300/17/300_albumpic_{}_0.jpg",id)
+}
+fn mid2file(mid:&str)->String{
+    format!("C400{}.m4a",mid)
+}
+
+//"http://ws.stream.qqmusic.qq.com/C400003lghpv0jfFXG.m4a?fromtag=0&guid=126548448&vkey=D661E5DF19B8FEB2FBFC554276746AC608AE98B0F30595B3B3BAD5C1C89ECCDD7BE599E306F786621856D22D6BD6B96F5DD344CF3814DB71"
+fn vkey2song(mid:&str,vkey:&str)->String{
+    let q=to_qs![
+      "fromtag" => "0",
+      "guid" => "126548448",
+      "vkey" => vkey 
+    ];
+    let file=format!("C400{}.m4a",mid);
+    format!("http://ws.stream.qqmusic.qq.com/{}?{}",file,q)
+}
+
+
+/// {"code":0,"cid":205361747,"userip":"101.233.48.172","data":{"expiration":80400,"items":[{"subcode":104003,"songmid":"003lghpv0jfFXG","filename":"C400003lghpv0jfFXG.m4a","vkey":"123"}]}}
+fn vkey2song1(s:String)->Vec<String>{
+    let d: Vkey = serde_json::from_str(&s).unwrap();
+    let f=move |i:&Item|->String{format!("http://ws.stream.qqmusic.qq.com/{}?fromtag=0&guid=126548448&vkey={}",i.filename,i.vkey)} ;
+    let r:Vec<String>=d.data.items
+        .iter()
+        .filter(|i|(i.vkey.len()>0))
+        .map(|i|f(i))
+        .collect();
+    r
+}
+
+
 
 
 fn create_sdk()->SDK{
@@ -304,7 +408,44 @@ fn create_sdk()->SDK{
         data:hash![],
     });
 
-   //...
+    apis.insert("toplist1".to_string(),Api{
+        url:"https://c.y.qq.com/v8/fcg-bin/fcg_v8_toplist_cp.fcg".to_string(),
+        method:Methods::get,
+        query:hash![
+              "g_tk" => "5381",
+              "uin" => "0",
+              "format" => "json",
+              "inCharset" => "utf-8",
+              "outCharset" => "utf-8¬ice=0",
+              "platform" => "h5",
+              "needNewCode" => "1",
+              "tpl" => "3",
+              "page" => "detail",
+              "type" => "top",
+              "topid" => "27", //27..100
+              "_" => "1519963122923" 
+        ],
+        data:hash![],
+    });
+
+    apis.insert("vkey".to_string(),Api{
+        url:"https://c.y.qq.com/base/fcgi-bin/fcg_music_express_mobile3.fcg".to_string(),
+        method:Methods::get,
+        query:hash![
+          "format" => "json205361747",
+          "platform" => "yqq",
+          "guid" => "126548448",
+          "cid" => "205361747",
+          "songmid" => "003lghpv0jfFXG",            //  查询多个songmid=id1,id2,id3,id4  get url长度有限制,不可无限多个,批量获取需分页
+          "filename" => "C400003lghpv0jfFXG.m4a"    //  c400 + songmid + .m4a   多个同上逗号分隔 k=v1,v2,v3,v4...
+        ],
+        data:hash![],
+    });
+
+    // ...
+
+
+
 
     let mut sdk:SDK =HashMap::new();
     for (k,Api{url,method,query,data}) in apis{
@@ -338,20 +479,25 @@ fn test_download(){
 }
 
 
-
-
-
+fn test_vkey2song(){
+    let s=r#"
+{"code":0,"cid":205361747,"userip":"101.233.48.172","data":{"expiration":80400,"items":[{"subcode":104003,"songmid":"003lghpv0jfFXG","filename":"C400003lghpv0jfFXG.m4a","vkey":""},{"subcode":0,"songmid":"000B4ijs4Ufwql","filename":"C400000B4ijs4Ufwql.m4a","vkey":"A8331F2CF22B4BE50873EF46BC10ECBA76F842FD61D8BB5BB4956A863585A796D9151373EC2D0597B19985CB3B1ADA7D195B8DE605DA8397"}]}}
+        "#;
+    let r=vkey2song1(s.to_string());
+    println!("{:?}",r);
+    for i in &r{
+        download(i);
+    }
+}
 
 fn main(){
+   test_vkey2song();
    //test_download();
    //test_sdk();
    //test_get();
    //test_get1();
    //test_post_json();
    //test_post_form();
-
-
-
 
 }
 
