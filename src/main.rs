@@ -146,18 +146,17 @@ fn create_client()-> Result<(Client), Box<dyn std::error::Error + Send + Sync + 
 
 
 #[tokio::main]
-async fn get(u:&str,q:&Vec<(String,String)>) ->MyResult
-{
+async fn get(u:&str,q:&Vec<(String,String)>) ->MyResult {
     let u1=add_qs(u,q);
     println!("{}",u1);
-    Ok(u1)
-    // let client=create_client()?;
-    // let body = client.get(&u1)
-    //     .send()
-    //     .await?
-    //     .text()
-    //     .await?;
-    // Ok(body)
+    //Ok(u1)
+    let client=create_client()?;
+    let body = client.get(&u1)
+        .send()
+        .await?
+        .text()
+        .await?;
+    Ok(body)
 }
 
 fn get1(u:String,q:HashMap<String,String>)->GET{
@@ -285,13 +284,13 @@ fn create_sdk()->SDK{
 
 
 fn test_sdk()->MyResult{
-    let s=create_sdk();
+    let s =create_sdk();
     println!("{:?}",s.keys());
 
     let q2=hash!["w"=>"从开始到现在","p"=>"1"];
-    let r=s.get("search").unwrap()(q2)?;
-    //let r=(&s["search"])(q2)?;
-    println!("{}",r);
+//    let r=s.get("search").unwrap()(q2)?;
+//    //let r=(&s["search"])(q2)?;
+//    println!("{}",r);
     Ok("123".to_string())
 }
 
