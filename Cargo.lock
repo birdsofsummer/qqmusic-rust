@@ -714,6 +714,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.12.0",
  "bincode",
+ "bytes",
  "chrono",
  "cookie 0.13.3",
  "http",

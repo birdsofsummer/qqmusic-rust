@@ -1,17 +1,36 @@
 extern crate serde_json;
-use reqwest::Error;
+
+//use reqwest::Error;
 use reqwest::{Client};
-use std::collections::HashMap;
-use std::hash::Hash;
-use std::fmt::Debug;
 use http::header::HeaderMap;
 //use http::Uri;
 use url::{form_urlencoded,UrlQuery,Url};
 use serde::{Deserialize, Serialize};
+
+use bytes::Bytes;
+
 use std::rc::Rc;
 use std::cell::RefCell;
+
+use std::process;
+use std::env;
+use std::fs;
 use std::fs::File;
-use bytes::Bytes;
+use std::error::Error;
+use std::io::prelude::*;
+use std::path::Path;
+use std::io;
+use std::io::prelude::*;
+use std::io::BufReader;
+use std::{thread, time};
+use std::str::FromStr;
+use std::hash::Hash;
+use std::collections::HashMap;
+use std::fmt::Debug;
+
+
+
+
 
 
 type MyResult= Result<String,Box<dyn std::error::Error + Send + Sync + 'static>>;
@@ -123,7 +142,7 @@ fn hash2vec<K,V>(h:HashMap<K,V>)->Vec<(K,V)>
 }
 
 
-fn create_client()-> Result<(Client), Box<dyn std::error::Error + Send + Sync + 'static>>{
+fn create_client()-> Result<Client, Box<dyn std::error::Error + Send + Sync + 'static>>{
         let h=vec![
             ("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:75.0) Gecko/20100101 Firefox/75.0"),
             ("Accept-Language", "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2"),
@@ -160,26 +179,26 @@ async fn get(u:&str,q:&Vec<(String,String)>) ->MyResult {
     Ok(body)
 }
 
+fn url2name(u:&str)->Result<String,url::ParseError>{
+    let u1= Url::parse(u)?;   
+    let p=u1.path().split("/").last().unwrap();
+    Ok(p.to_string())
+}
+
 
 #[tokio::main]
-async fn download(u:&str,q:&Vec<(String,String)>) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>>  {
-    let u1=add_qs(u,q);
-    println!("{}",u1);
-    //Ok(u1)
+async fn download(u:&str) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>>  {
     let client=create_client()?;
-    let body = client.get(&u1)
+    let body = client.get(u)
         .send()
         .await?
         .bytes()
         .await?;
-    let path="1.mp3"; 
-    //...
-    let mut output: File = File::create(path)?;
-    output.write(&Bytes::from(body))?;
+    let path=url2name(u)?;
+    let mut o: File = File::create(path)?;
+    o.write(&Bytes::from(body))?;
     Ok(())
 }
-
-
 
 fn get1(u:String,q:HashMap<String,String>)->GET{
     //let mix1=|x:i32|->i32{x*2};
@@ -302,9 +321,6 @@ fn create_sdk()->SDK{
     sdk
 }
 
-
-
-
 fn test_sdk()->MyResult{
     let s =create_sdk();
     println!("{:?}",s.keys());
@@ -316,12 +332,26 @@ fn test_sdk()->MyResult{
     Ok("123".to_string())
 }
 
+fn test_download(){
+    let u="https://img-blog.csdnimg.cn/20190918135101160.png?x=1&y=2";
+    download(u);
+}
+
+
+
+
+
 
 fn main(){
+   //test_download();
    //test_sdk();
    //test_get();
    //test_get1();
    //test_post_json();
    //test_post_form();
+
+
+
+
 }
 
