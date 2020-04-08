@@ -362,6 +362,14 @@ fn id2album (id:&str)->String{
     format!("http://imgcache.qq.com/music/photo/album_300/17/300_albumpic_{}_0.jpg",id)
 }
 fn mid2file(mid:&str)->String{
+    // 文件类型
+    let SONG_TYPES=hash![
+           "A000"=>"ape",
+           "F000"=>"flac",
+           "M800"=>"mp3",
+           "M500"=>"mp3",
+           "C400"=>"m4a"
+    ];
     format!("C400{}.m4a",mid)
 }
 
@@ -390,18 +398,44 @@ fn vkey2song1(s:String)->Vec<String>{
 }
 
 
-
-
 fn create_sdk()->SDK{
     let mut apis:HashMap<String,Api>=HashMap::new();
+
+    let top_lists=hash![
+	"27"=> "巅峰榜·新歌",
+	"28"=> "巅峰榜·网络歌曲",
+	"29"=> "巅峰榜·影视金曲",
+	"30"=> "巅峰榜·梦想的声音",
+	"31"=> "巅峰榜·微信分享",
+	"32"=> "巅峰榜·音乐人",
+	"33"=> "全军出击·巅峰榜·歌手2018",
+	"34"=> "巅峰榜·人气",
+	"35"=> "QQ音乐巅峰分享榜",
+	"36"=> "巅峰榜·K歌金曲",
+	"50"=> "巅峰榜·中国有嘻哈",
+	"51"=> "巅峰榜·明日之子",
+	"52"=> "巅峰榜·腾讯音乐人原创榜",
+	"53"=> "机车",
+	"54"=> "勇闯天涯·巅峰榜·明日之子",
+	"55"=> "江小白YOLO·巅峰榜·中国新说唱",
+	"56"=> "巅峰榜·2018中国好声音",
+	"57"=> "电音榜",
+	"58"=> "说唱榜",
+	"59"=> "香港地区榜",
+	"60"=> "抖音排行榜",
+	"61"=> "台湾地区榜"
+    ];
+
     apis.insert("search".to_string(),Api{
         url:"https://c.y.qq.com/soso/fcgi-bin/client_search_cp".to_string(),
         method:Methods::get,
         query:hash![
-            "format"=>"json",
+            //"cr": "1",
+            //"t":"8",
+            "format"=>"json", //每页有限制
             "aggr"=>"1",
             "flag_qc"=>"1",
-            "p"=>"1",
+            "p"=>"1", ////p = x.data.song.totalnum / 60 , 16
             "n"=>"30",
             "w"=>"简单爱"
         ],
@@ -422,12 +456,13 @@ fn create_sdk()->SDK{
               "tpl" => "3",
               "page" => "detail",
               "type" => "top",
-              "topid" => "27", //27..100
+              "topid" => "27", //27..100 top_lists
               "_" => "1519963122923" 
         ],
         data:hash![],
     });
 
+    // 有些songmid不行
     apis.insert("vkey".to_string(),Api{
         url:"https://c.y.qq.com/base/fcgi-bin/fcg_music_express_mobile3.fcg".to_string(),
         method:Methods::get,
@@ -442,9 +477,90 @@ fn create_sdk()->SDK{
         data:hash![],
     });
 
+    apis.insert("album".to_string(),Api{
+        url:"https://c.y.qq.com/v8/fcg-bin/fcg_v8_album_info_cp.fcg".to_string(),
+        method:Methods::get,
+        query:hash![
+            "albummid"=>"000QXjVc1r7NQO" 
+        ],
+        data:hash![],
+    });
+
+    apis.insert("lyric".to_string(),Api{
+        url:"https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg".to_string(),
+        method:Methods::get,
+        query:hash![
+            "songmid"=>"xxx",
+            "format"=>"json",
+            "nobase64"=>"1"
+        ],
+        data:hash![],
+    });
+
+
+/*
+{
+  "req_0": {
+    "module": "vkey.GetVkeyServer",
+    "method": "CgiGetVkey",
+    "param": {
+      "guid": "358840384",
+      "songmid": "ccc",
+      "songtype": [
+        0
+      ],
+      "uin": "1443481947",
+      "loginflag": 1,
+      "platform": "20"
+    }
+  },
+  "comm": {
+    "uin": "18585073516",
+    "format": "json",
+    "ct": 24,
+    "cv": 0
+  }
+}
+*/
+    apis.insert("song".to_string(),Api{
+        url:"https://u.y.qq.com/cgi-bin/musicu.fcg".to_string(),
+        method:Methods::get,
+        query:hash![
+            "format"=>"json",
+            "data"=>""  //上面这个复杂的json...
+        ],
+        data:hash![],
+    });
+
+    //https://www.jianshu.com/p/ce1180eac37b
+    apis.insert("playlist".to_string(),Api{
+        url:"https://c.y.qq.com/qzone/fcg-bin/fcg_ucc_getcdinfo_byids_cp.fcg".to_string(),
+        method:Methods::get,
+        query:hash![
+              "uin"=> "0",
+              "format"=> "json",
+              "inCharset"=> "utf-8",
+              "outCharset"=> "utf-8",
+              "notice"=> "0",
+              "platform"=> "h5",
+              "needNewCode"=> "1",
+              "new_format"=> "1",
+              "pic"=> "500",
+              "disstid"=> "3719969047", //歌单id
+              "type"=> "1",
+              "json"=> "1",
+              "utf8"=> "1",
+              "onlysong"=> "0",
+              "picmid"=> "1",
+              "nosign"=> "1",
+              "song_begin"=> "0",
+              "song_num"=> "1000", //歌曲数量
+              "_"=> "1537276176570" //unix ts
+        ],
+        data:hash![],
+    });
+
     // ...
-
-
 
 
     let mut sdk:SDK =HashMap::new();
@@ -490,8 +606,12 @@ fn test_vkey2song(){
     }
 }
 
+
+
+
+
 fn main(){
-   test_vkey2song();
+   //test_vkey2song();
    //test_download();
    //test_sdk();
    //test_get();

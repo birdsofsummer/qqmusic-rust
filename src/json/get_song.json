@@ -1,0 +1,22 @@
+{
+  "req_0": {
+    "module": "vkey.GetVkeyServer",
+    "method": "CgiGetVkey",
+    "param": {
+      "guid": "358840384",
+      "songmid": "ccc",
+      "songtype": [
+        0
+      ],
+      "uin": "1443481947",
+      "loginflag": 1,
+      "platform": "20"
+    }
+  },
+  "comm": {
+    "uin": "18585073516",
+    "format": "json",
+    "ct": 24,
+    "cv": 0
+  }
+}
