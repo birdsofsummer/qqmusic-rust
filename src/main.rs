@@ -10,7 +10,8 @@ use url::{form_urlencoded,UrlQuery,Url};
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 use std::cell::RefCell;
-
+use std::fs::File;
+use bytes::Bytes;
 
 
 type MyResult= Result<String,Box<dyn std::error::Error + Send + Sync + 'static>>;
@@ -158,6 +159,27 @@ async fn get(u:&str,q:&Vec<(String,String)>) ->MyResult {
         .await?;
     Ok(body)
 }
+
+
+#[tokio::main]
+async fn download(u:&str,q:&Vec<(String,String)>) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>>  {
+    let u1=add_qs(u,q);
+    println!("{}",u1);
+    //Ok(u1)
+    let client=create_client()?;
+    let body = client.get(&u1)
+        .send()
+        .await?
+        .bytes()
+        .await?;
+    let path="1.mp3"; 
+    //...
+    let mut output: File = File::create(path)?;
+    output.write(&Bytes::from(body))?;
+    Ok(())
+}
+
+
 
 fn get1(u:String,q:HashMap<String,String>)->GET{
     //let mix1=|x:i32|->i32{x*2};
