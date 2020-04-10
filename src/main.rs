@@ -35,6 +35,49 @@ extern crate chrono;
 use chrono::prelude::*;
 
 
+#[macro_use]
+extern crate lazy_static;
+
+lazy_static! {
+    static ref JSON_H:CorsHeaders=create_h(mime::json);
+    static ref BASE64_H:CorsHeaders=create_h(mime::base64);
+ //   static ref CONFIG: Config= {
+ //       let client_id=env::var("baidu_ocr_APIKey").unwrap();
+ //       let client_secret=env::var("baidu_ocr_SecretKey").unwrap();
+ //       let query= Config { 
+ //           grant_type:"client_credentials".into(),
+ //           client_id: client_id.into(),
+ //           client_secret:client_secret.into(),
+ //       };
+ //       query
+ //   };
+}
+
+enum mime{
+    json,
+    img,
+    base64,
+}
+fn create_h(m:mime)->CorsHeaders{
+    let ACCESS_CONTROL_ALLOW_HEADERS:String="accept,accept_encoding,cf_connecting_ip,cf_ipcountry,cf_ray,cf_visitor,connection,content_length,content_type,host,user_agent,x_forwarded_proto,x_real_ip,accept_charset,accept_language,accept_datetime,authorization,cache_control,date,if_match,if_modified_since,if_none_match,if_range,if_unmodified_since,max_forwards,pragma,range,te,upgrade,upgrade_insecure_requests,x_requested_with,chrome_proxy,purpose,accept,accept_language,content_language,content_type,dpr,downlink,save_data,viewport_width,width,token".to_owned();
+    let ACCESS_CONTROL_ALLOW_ORIGIN:String="*".to_owned();
+    let ACCESS_CONTROL_ALLOW_METHODS: String="GET,POST,PUT,PATCH,TRACE,DELETE,HEAD,OPTIONS".to_owned();
+    let ACCESS_CONTROL_MAX_AGE: String= "1728000".to_owned();
+    let t=match m{
+        mime::json=>{"application/json; charset=utf-8".to_string()}
+        mime::img=>{"image/jpeg;".to_string()}
+        mime::base64=>{"text/html; charset=utf-8".to_string()}
+        _=>{"text/html; charset=utf-8".to_string()}
+    };
+    CorsHeaders{
+        content_type:t,
+        access_control_allow_origin: ACCESS_CONTROL_ALLOW_ORIGIN.clone(),
+        access_control_allow_methods: ACCESS_CONTROL_ALLOW_METHODS.clone(),
+        access_control_allow_headers: ACCESS_CONTROL_ALLOW_HEADERS.clone(),
+        access_control_max_age: ACCESS_CONTROL_MAX_AGE.clone(),
+    }
+}
+
 
 
 type MyResult= Result<String,Box<dyn std::error::Error + Send + Sync + 'static>>;
@@ -135,6 +178,37 @@ pub struct Item {
 
 /// https://www.jianshu.com/p/67e4bd47d981
 /// https://docs.rs/crate/reqwest/0.10.1
+
+
+/// struct - > str
+fn to_s<T: serde::Serialize>(d:T)->String{
+    serde_json::json!(d).to_string()
+}
+
+/// str -> json
+fn to_json<'a,T : Deserialize<'a>>(s:&'a str) -> T{
+    serde_json::from_str::<T>(s).unwrap()
+}
+
+
+fn base64encode(s:String)->String{
+   let c=Bytes::from(s);
+   let d=base64::encode(&c);
+   d
+}
+
+
+fn base64decode(s:&str)->String{
+   let b=base64::decode(s).unwrap();
+   let s3=String::from_utf8(b).unwrap();
+   s3
+}
+fn test_base64(){
+   let s1="123";
+   let s2=base64encode(s1.to_owned()); //MTIz
+   let s3=base64decode(&s2);
+   println!("{}|{}|{}",s1,s2,s3);     // 123
+}
 
 
 fn timestamp()-> String{
@@ -608,9 +682,121 @@ fn test_vkey2song(){
 
 
 
+#[derive(Serialize, Deserialize,Clone)]
+pub struct CorsHeaders {
+    #[serde(rename = "Content-Type")]
+    content_type: String,
+
+    #[serde(rename = "access-control-allow-origin")]
+    access_control_allow_origin: String,
+
+    #[serde(rename = "access-control-allow-methods")]
+    access_control_allow_methods: String,
+
+    #[serde(rename = "access-control-allow-headers")]
+    access_control_allow_headers: String,
+
+    #[serde(rename = "access-control-max-age")]
+    access_control_max_age: String,
+}
+
+#[derive(Serialize, Deserialize,Clone)]
+pub struct Res {
+    #[serde(rename = "isBase64Encoded")]
+    is_base64_encoded: bool,
+
+    #[serde(rename = "statusCode")]
+    status_code: i64,
+
+    #[serde(rename = "headers")]
+    headers: CorsHeaders,
+
+    #[serde(rename = "body")]
+    body: String,
+}
+
+
+#[derive(Serialize, Deserialize,Clone)]
+pub struct Body <T>{
+    #[serde(rename = "errorCode")]
+    error_code: i64,
+
+    #[serde(rename = "errorMessage")]
+    error_message: String,
+
+    #[serde(rename = "ok")]
+    ok: bool,
+
+    #[serde(rename = "data")]
+    data:T,
+}
+
+fn res_json<T: serde::Serialize>(code:i64,body:T)->String{
+   let b=Body{
+        error_code:code,
+        error_message:"".to_owned(),
+        ok:true,
+        data:body,
+   };
+   let body1=serde_json::json!(b).to_string();
+   let r=Res{
+        is_base64_encoded: false,
+        status_code: code,
+        headers: create_h(mime::json),
+        body: body1,
+   };
+   serde_json::json!(r).to_string()
+}
+
+fn res_json1<T: serde::Serialize>(code:i64,body:T)->String{
+   let body1=serde_json::json!(body).to_string();
+   let r=Res{
+        is_base64_encoded: false,
+        status_code: code,
+        headers: create_h(mime::json),
+        body: body1,
+   };
+   serde_json::json!(r).to_string()
+}
+
+
+fn res_base64<T: serde::Serialize>(code:i64,body:T)->String{
+   let body1=serde_json::json!(body).to_string();
+   let r=Res{
+        is_base64_encoded: true,
+        status_code: code,
+        headers: create_h(mime::base64),
+        body: base64encode(body1),
+   };
+   serde_json::json!(r).to_string()
+}
+
+
+
+#[derive(Serialize, Deserialize,Clone)]
+pub struct Test {
+    #[serde(rename = "x")]
+    x: i64,
+}
+fn test_res_json(){
+   let code=200_i64;
+   let body1=Test{x:123};
+   let r1=res_json::<Test>(code,body1.clone());
+   let r2=res_json(code,body1.clone());
+   let r3=res_json(code,"sss".to_owned());
+   let r4=res_json1(code,body1.clone());
+   println!("{}",r1);
+   println!("{}",r2);
+   println!("{}",r3);
+   println!("{}",r4);
+}
+
 
 
 fn main(){
+
+   //test_base64();
+   //test_res_json();
    //test_vkey2song();
    //test_download();
    //test_sdk();
@@ -618,6 +804,5 @@ fn main(){
    //test_get1();
    //test_post_json();
    //test_post_form();
-
 }
 

@@ -718,6 +718,7 @@ dependencies = [
  "chrono",
  "cookie 0.13.3",
  "http",
+ "lazy_static",
  "regex",
  "reqwest",
  "serde",
