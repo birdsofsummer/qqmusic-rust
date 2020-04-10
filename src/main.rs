@@ -30,7 +30,6 @@ use std::hash::Hash;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
-
 extern crate chrono;
 use chrono::prelude::*;
 
@@ -64,10 +63,10 @@ fn create_h(m:mime)->CorsHeaders{
     let ACCESS_CONTROL_ALLOW_METHODS: String="GET,POST,PUT,PATCH,TRACE,DELETE,HEAD,OPTIONS".to_owned();
     let ACCESS_CONTROL_MAX_AGE: String= "1728000".to_owned();
     let t=match m{
-        mime::json=>{"application/json; charset=utf-8".to_string()}
-        mime::img=>{"image/jpeg;".to_string()}
-        mime::base64=>{"text/html; charset=utf-8".to_string()}
-        _=>{"text/html; charset=utf-8".to_string()}
+        mime::json=>{"application/json; charset=utf-8".to_owned()}
+        mime::img=>{"image/jpeg;".to_owned()}
+        mime::base64=>{"text/html; charset=utf-8".to_owned()}
+        _=>{"text/html; charset=utf-8".to_owned()}
     };
     CorsHeaders{
         content_type:t,
@@ -311,7 +310,7 @@ fn create_client()-> Result<Client, Box<dyn std::error::Error + Send + Sync + 's
 #[tokio::main]
 async fn get(u:&str,q:&Vec<(String,String)>) ->MyResult {
     let u1=add_qs(u,q);
-    println!("{}",u1);
+    //println!("{}",u1);
     //Ok(u1)
     let client=create_client()?;
     let body = client.get(&u1)
@@ -398,19 +397,61 @@ fn test_get() {
     println!("{:?}", body);
 }
 
+
+
+fn get_song(h:HashMap<String,String>)->String{
+        let q1=hash![
+                    "format"=>"json",
+                    "aggr"=>"1",
+                    "flag_qc"=>"1",
+                    "p"=>"1",
+                    "n"=>"30",
+                    "w"=>"简单爱"
+                ];
+        let u="https://c.y.qq.com/soso/fcgi-bin/client_search_cp".to_string();
+        let f=get1(u,q1);
+        let r=f(h).unwrap();
+        r
+}
+
+trait QQmusic {
+    fn get_song(&self,h:HashMap<String,String>)->String;
+    fn test(&self);
+    //...
+    //fn echo(&self);
+    //fn double(&mut self);
+}
+
+impl QQmusic for i32 {
+    fn get_song(&self,h:HashMap<String,String>)->String{
+            let q1=hash![
+                        "format"=>"json",
+                        "aggr"=>"1",
+                        "flag_qc"=>"1",
+                        "p"=>"1",
+                        "n"=>"30",
+                        "w"=>"简单爱"
+                    ];
+            let u="https://c.y.qq.com/soso/fcgi-bin/client_search_cp".to_string();
+            let f=get1(u,q1);
+            let r=f(h).unwrap();
+            r
+    }
+
+    fn test(&self){
+       let a=1_i32;
+       let q2=hash!["w"=>"从开始到现在".to_owned(),"p"=>"1"];
+       let r=a.get_song(q2);
+       println!("{}",r);
+    }
+    //fn echo(&self){println!("{}",self);}
+    //fn double(&mut self){*self*=2;}
+}
+
+
 fn test_get1(){
-    let q1=hash![
-                "format"=>"json",
-                "aggr"=>"1",
-                "flag_qc"=>"1",
-                "p"=>"1",
-                "n"=>"30",
-                "w"=>"简单爱"
-            ];
     let q2=hash!["w"=>"从开始到现在","p"=>"1"];
-    let u="https://c.y.qq.com/soso/fcgi-bin/client_search_cp".to_string();
-    let f=get1(u,q1);
-    let r=f(q2).unwrap();
+    let r=get_song(q2);
     println!("{:?}",r);
 }
 
@@ -792,8 +833,26 @@ fn test_res_json(){
 }
 
 
+fn search_song(){
+    let mut arg=Vec::new();
+    for i in env::args() {
+        arg.push(i);
+    }
+    let song=arg.last().unwrap();
+   // println!("{}",song);
+    let q2=hash!["w"=>song.to_owned(),"p"=>"1"];
+    let r=get_song(q2);
+    println!("{}",r);
+
+
+}
+
 
 fn main(){
+   search_song();
+
+   //let a=10_i32;
+   //a.test();
 
    //test_base64();
    //test_res_json();

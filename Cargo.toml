@@ -1,5 +1,5 @@
 [package]
-name = "qqmusic-rust"
+name = "qqmusic"
 version = "0.1.0"
 authors = ["小舟从此逝 <1052334039@qq.com>"]
 edition = "2018"
