@@ -8,7 +8,9 @@ def exec(cmd):
     return t
 
 def main():
-    cmd="target/debug/qqmusic 从开始到现在"
+    #cmd="target/debug/qqmusic 从开始到现在"
+    #cmd="target/release/qqmusic 从开始到现在"
+    cmd="./qqmusic 从开始到现在"
     r=exec(cmd)
     #r1=json.loads(r)
     #print(r1)
